@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise AI Rollout — Governance Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #0b0e14;
+    --surface: #131720;
+    --surface2: #1a2030;
+    --border: #252d3d;
+    --border-bright: #3a4560;
+
+    --dev: #3b82f6;
+    --dev-dim: #1e3a5f;
+    --biz: #10b981;
+    --biz-dim: #0d3d2a;
+    --cust: #f59e0b;
+    --cust-dim: #3d2a0d;
+
+    --gateway: #8b5cf6;
+    --gateway-dim: #2d1f4a;
+    --identity: #ec4899;
+    --identity-dim: #3d1228;
+    --data: #06b6d4;
+    --data-dim: #0d2f38;
+    --audit: #6366f1;
+    --audit-dim: #1e2050;
+    --policy: #f97316;
+    --policy-dim: #3d2010;
+
+    --red: #ef4444;
+    --red-dim: #3d1010;
+    --yellow: #eab308;
+    --muted: #6b7280;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+
+    --font: 'IBM Plex Sans', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font);
+    color: var(--text);
+    padding: 32px 24px 64px;
+    min-width: 1100px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 24px;
+  }
+  .header-left h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+  .header-left h1 span { color: var(--gateway); }
+  .header-left p {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    max-width: 520px;
+    line-height: 1.6;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── LAYOUT ── */
+  .diagram {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  /* ── ZONE LABEL ── */
+  .zone-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    min-width: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 14px 16px;
+    flex: 1;
+    position: relative;
+  }
+
+  .section-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── NODE GRID ── */
+  .nodes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 130px;
+    flex: 1;
+  }
+  .node-name {
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  .node-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    line-height: 1.4;
+  }
+
+  /* Entry point color overrides */
+  .node.dev { border-color: var(--dev-dim); }
+  .node.dev .node-name { color: var(--dev); }
+  .node.biz { border-color: var(--biz-dim); }
+  .node.biz .node-name { color: var(--biz); }
+  .node.cust { border-color: var(--cust-dim); }
+  .node.cust .node-name { color: var(--cust); }
+  .node.gw { border-color: var(--gateway-dim); }
+  .node.gw .node-name { color: var(--gateway); }
+  .node.id { border-color: var(--identity-dim); }
+  .node.id .node-name { color: var(--identity); }
+  .node.dt { border-color: var(--data-dim); }
+  .node.dt .node-name { color: var(--data); }
+  .node.au { border-color: var(--audit-dim); }
+  .node.au .node-name { color: var(--audit); }
+  .node.pol { border-color: var(--policy-dim); }
+  .node.pol .node-name { color: var(--policy); }
+  .node.red { border-color: var(--red-dim); }
+  .node.red .node-name { color: var(--red); }
+
+  /* ── FLOW ARROW ── */
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 0;
+    color: var(--border-bright);
+    font-size: 18px;
+  }
+  .flow-arrow span {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+
+  /* ── WIDE SECTION (full-width spanning) ── */
+  .section.wide { width: 100%; }
+  .section.gateway {
+    border-color: var(--gateway);
+    background: linear-gradient(135deg, var(--surface) 0%, var(--gateway-dim) 100%);
+  }
+  .section.identity-bar {
+    border-color: var(--identity);
+    background: linear-gradient(135deg, var(--surface) 0%, var(--identity-dim) 100%);
+  }
+  .section.audit-bar {
+    border-color: var(--audit);
+    background: linear-gradient(135deg, var(--surface) 0%, var(--audit-dim) 100%);
+  }
+
+  /* ── PILL TAGS ── */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .tag.gw { border-color: var(--gateway); color: var(--gateway); background: var(--gateway-dim); }
+  .tag.id { border-color: var(--identity); color: var(--identity); background: var(--identity-dim); }
+  .tag.dt { border-color: var(--data); color: var(--data); background: var(--data-dim); }
+  .tag.au { border-color: var(--audit); color: var(--audit); background: var(--audit-dim); }
+  .tag.pol { border-color: var(--policy); color: var(--policy); background: var(--policy-dim); }
+  .tag.red { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+  .tag.dev { border-color: var(--dev); color: var(--dev); background: var(--dev-dim); }
+  .tag.biz { border-color: var(--biz); color: var(--biz); background: var(--biz-dim); }
+  .tag.cust { border-color: var(--cust); color: var(--cust); background: var(--cust-dim); }
+  .tag.warn { border-color: var(--yellow); color: var(--yellow); background: #2a2200; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 10px 0;
+  }
+
+  /* ── RISK CALLOUT ── */
+  .risk-box {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #fca5a5;
+    flex: 1;
+  }
+  .risk-box strong {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--red);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── FOOTNOTES ── */
+  .footnotes {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .footnote {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text-dim);
+  }
+  .footnote strong {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .footnote.warn-note { border-color: var(--yellow); }
+  .footnote.warn-note strong { color: var(--yellow); }
+  .footnote.red-note { border-color: var(--red); }
+  .footnote.red-note strong { color: var(--red); }
+  .footnote.ok-note { border-color: var(--biz); }
+  .footnote.ok-note strong { color: var(--biz); }
+
+  /* Column layout helpers */
+  .col { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .col.fixed-200 { flex: 0 0 200px; }
+  .col.fixed-160 { flex: 0 0 160px; }
+
+  .section-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .section-row .node { min-width: 110px; }
+
+  /* Gateway sub-zones */
+  .gw-zones {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+
+  .gw-zone {
+    background: var(--surface2);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 10px;
+  }
+  .gw-zone-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gateway);
+    margin-bottom: 8px;
+  }
+  .gw-zone ul {
+    list-style: none;
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .gw-zone ul li::before {
+    content: "▸ ";
+    color: var(--gateway);
+    font-size: 9px;
+  }
+
+  /* Data tier colors */
+  .tier-public { color: var(--biz); }
+  .tier-internal { color: var(--yellow); }
+  .tier-restricted { color: var(--cust); }
+  .tier-confidential { color: var(--red); }
+
+  /* Connector arrows between zones */
+  .connector-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 2px 0;
+  }
+  .connector-line {
+    flex: 1;
+    height: 1px;
+    background: repeating-linear-gradient(90deg, var(--border-bright) 0, var(--border-bright) 6px, transparent 6px, transparent 12px);
+  }
+  .connector-mid {
+    background: var(--surface);
+    border: 1px solid var(--border-bright);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Enterprise AI Rollout — <span>Governance Architecture</span></h1>
+    <p>
+      What responsible deployment actually requires vs. "install the tool and you're done."<br>
+      This is not optional infrastructure. Every missing layer is a live liability.
+    </p>
+  </div>
+  <div class="badge">⚠ NOT OPTIONAL INFRASTRUCTURE</div>
+</div>
+
+<div class="diagram">
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ROW 1: IDENTITY PLANE (horizontal, full width) -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="section identity-bar wide">
+    <div class="section-title">
+      <span class="dot" style="background:var(--identity)"></span>
+      <span style="color:var(--identity)">IDENTITY &amp; ACCESS PLANE</span>
+      <span style="color:var(--muted);font-weight:300;letter-spacing:0;font-size:10px;margin-left:8px">— who is allowed to do anything at all</span>
+    </div>
+    <div class="nodes">
+      <div class="node id">
+        <span class="node-name">SSO / IdP Integration</span>
+        <span class="node-sub">EntraID / Okta<br>No local accounts</span>
+      </div>
+      <div class="node id">
+        <span class="node-name">Role-Based Access</span>
+        <span class="node-sub">Dev / BizUser / Agent<br>Separate permission sets</span>
+      </div>
+      <div class="node id">
+        <span class="node-name">Service Accounts</span>
+        <span class="node-sub">Read-only, scoped<br>No human credentials</span>
+      </div>
+      <div class="node id">
+        <span class="node-name">MFA Enforcement</span>
+        <span class="node-sub">Required for all<br>AI tool access</span>
+      </div>
+      <div class="node id">
+        <span class="node-name">Session &amp; Token Mgmt</span>
+        <span class="node-sub">Short-lived tokens<br>Expiry + rotation</span>
+      </div>
+      <div class="node id">
+        <span class="node-name">Privileged Access</span>
+        <span class="node-sub">PAM for admin tasks<br>Zero standing access</span>
+      </div>
+      <div class="node id">
+        <span class="node-name">API Key Vault</span>
+        <span class="node-sub">Azure Key Vault / HashiCorp<br>No keys in code or chat</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ROW 2: THREE ENTRY POINT LANES -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="row">
+
+    <!-- DEV LANE -->
+    <div class="section" style="border-color:var(--dev-dim); flex:1.1">
+      <div class="section-title">
+        <span class="dot" style="background:var(--dev)"></span>
+        <span style="color:var(--dev)">ENTRY: SOFTWARE DEVELOPERS</span>
+      </div>
+      <div class="nodes">
+        <div class="node dev">
+          <span class="node-name">Claude Code / Copilot</span>
+          <span class="node-sub">IDE plugin or CLI<br>Agentic code tasks</span>
+          <div class="tags">
+            <span class="tag red">HIGHEST RISK</span>
+            <span class="tag warn">Code exec</span>
+          </div>
+        </div>
+        <div class="node dev">
+          <span class="node-name">GitHub / ADO</span>
+          <span class="node-sub">PR creation, pipelines<br>Branch-write access</span>
+        </div>
+        <div class="node dev">
+          <span class="node-name">Local Filesystem</span>
+          <span class="node-sub">Read/write scope<br>Must be explicitly bounded</span>
+          <div class="tags"><span class="tag warn">Scope creep risk</span></div>
+        </div>
+        <div class="node dev">
+          <span class="node-name">CLAUDE.md / Policy File</span>
+          <span class="node-sub">Behaviour instructions<br>per-repo or per-org</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.7">
+        <span style="color:var(--red)">⚠ Unique risks:</span> Silent decision-making in generated code (error handling, network failure paths, auth logic). Prompt injection via repo contents. Accidental secret exposure. Agent spawning sub-agents without review.
+      </div>
+    </div>
+
+    <!-- BIZ LANE -->
+    <div class="section" style="border-color:var(--biz-dim); flex:1.1">
+      <div class="section-title">
+        <span class="dot" style="background:var(--biz)"></span>
+        <span style="color:var(--biz)">ENTRY: BUSINESS WORKERS</span>
+      </div>
+      <div class="nodes">
+        <div class="node biz">
+          <span class="node-name">Claude.ai / M365 Copilot</span>
+          <span class="node-sub">Chat, summarise, draft<br>Email, docs, analysis</span>
+        </div>
+        <div class="node biz">
+          <span class="node-name">SharePoint (Cloud)</span>
+          <span class="node-sub">Live document access<br>Permissions must mirror IdP</span>
+          <div class="tags"><span class="tag warn">Oversharing risk</span></div>
+        </div>
+        <div class="node biz">
+          <span class="node-name">Local Drive Access</span>
+          <span class="node-sub">Uploaded files, OneDrive<br>DLP scan required</span>
+        </div>
+        <div class="node biz">
+          <span class="node-name">Email (Outlook/Exchange)</span>
+          <span class="node-sub">Connected inbox access<br>Already live at many orgs</span>
+          <div class="tags"><span class="tag red">No safeguards yet</span></div>
+        </div>
+        <div class="node biz">
+          <span class="node-name">Data Lake / Snowflake</span>
+          <span class="node-sub">Analyst AI queries<br>Object-level grants required</span>
+          <div class="tags"><span class="tag red">No safeguards yet</span></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.7">
+        <span style="color:var(--red)">⚠ Unique risks:</span> AI inherits the user's permissions — over-permissioned users mean over-permissioned AI. Accidental PII exfiltration in prompt. No awareness of what data the tool is reading on their behalf.
+      </div>
+    </div>
+
+    <!-- CUSTOMER AGENT LANE -->
+    <div class="section" style="border-color:var(--cust-dim); flex:1">
+      <div class="section-title">
+        <span class="dot" style="background:var(--cust)"></span>
+        <span style="color:var(--cust)">ENTRY: CUSTOMER-FACING AGENTS</span>
+      </div>
+      <div class="nodes">
+        <div class="node cust">
+          <span class="node-name">Public Chatbot / Widget</span>
+          <span class="node-sub">Web / mobile surface<br>Untrusted user input</span>
+          <div class="tags"><span class="tag red">Hostile inputs</span></div>
+        </div>
+        <div class="node cust">
+          <span class="node-name">Internal Knowledge Base</span>
+          <span class="node-sub">RAG over product docs<br>Scope must be explicit</span>
+        </div>
+        <div class="node cust">
+          <span class="node-name">CRM / Support Ticketing</span>
+          <span class="node-sub">Salesforce, Zendesk<br>Write-access = high risk</span>
+          <div class="tags"><span class="tag warn">Write access?</span></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:10px;color:var(--text-dim);line-height:1.7">
+        <span style="color:var(--red)">⚠ Unique risks:</span> Jailbreaking. Brand reputation. Regulatory liability (CCPA, HIPAA). Content policy violations. Prompt injection via user-submitted documents.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="connector-row">
+    <div class="connector-line"></div>
+    <div class="connector-mid">all traffic routes through ↓</div>
+    <div class="connector-line"></div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ROW 3: AI GATEWAY / FIREWALL — BIG SECTION -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="section gateway wide">
+    <div class="section-title">
+      <span class="dot" style="background:var(--gateway)"></span>
+      <span style="color:var(--gateway)">AI GATEWAY &amp; SECURITY FIREWALL</span>
+      <span style="color:var(--muted);font-weight:300;letter-spacing:0;font-size:10px;margin-left:8px">— the thing in the middle that watches everything. This may be a single product (LiteLLM, Portkey, Azure APIM + custom policies, Aporia, Lakera) or assembled from components.</span>
+    </div>
+    <div class="gw-zones">
+
+      <div class="gw-zone">
+        <div class="gw-zone-title">🛡 Prompt Injection Defense</div>
+        <ul>
+          <li>Input sanitisation</li>
+          <li>Indirect injection detection (docs/email content)</li>
+          <li>Instruction hierarchy enforcement</li>
+          <li>System prompt integrity check</li>
+          <li>Anomaly scoring on inputs</li>
+        </ul>
+        <div class="tags" style="margin-top:8px"><span class="tag red">OWASP LLM01</span></div>
+      </div>
+
+      <div class="gw-zone">
+        <div class="gw-zone-title">🚫 Content Safety (Output)</div>
+        <ul>
+          <li>Hate / harassment filter</li>
+          <li>Self-harm / violence filter</li>
+          <li>CBRN / weapons filter</li>
+          <li>Sexual content filter</li>
+          <li>Competitor mention rules</li>
+          <li>Legal / liability review flags</li>
+        </ul>
+        <div class="tags" style="margin-top:8px"><span class="tag red">OWASP LLM06</span><span class="tag warn">Mandatory for customer agents</span></div>
+      </div>
+
+      <div class="gw-zone">
+        <div class="gw-zone-title">🔒 Data Loss Prevention</div>
+        <ul>
+          <li>PII detection (names, SSN, DOB)</li>
+          <li>Credential / secret detection</li>
+          <li>PHI detection (HIPAA context)</li>
+          <li>Data classification tagging</li>
+          <li>Block Tier 3/4 data in prompts</li>
+          <li>Redaction before logging</li>
+        </ul>
+        <div class="tags" style="margin-top:8px"><span class="tag red">OWASP LLM02</span><span class="tag id">Ties to IdP</span></div>
+      </div>
+
+      <div class="gw-zone">
+        <div class="gw-zone-title">⚙ Model &amp; Tool Policy</div>
+        <ul>
+          <li>Model allowlist (no shadow models)</li>
+          <li>Model version pinning</li>
+          <li>Tool / MCP server allowlist</li>
+          <li>Max context size limits</li>
+          <li>Rate limiting per user/role</li>
+          <li>Cost guardrails per team</li>
+        </ul>
+        <div class="tags" style="margin-top:8px"><span class="tag pol">Policy Engine</span><span class="tag warn">OWASP LLM09</span></div>
+      </div>
+
+      <div class="gw-zone">
+        <div class="gw-zone-title">🤖 Agentic Controls</div>
+        <ul>
+          <li>Human-in-loop checkpoints</li>
+          <li>Action scope limits (read vs write)</li>
+          <li>Sub-agent spawn controls</li>
+          <li>Evidence manifest required</li>
+          <li>Rollback / undo capability</li>
+          <li>Blast radius containment</li>
+        </ul>
+        <div class="tags" style="margin-top:8px"><span class="tag red">OWASP LLM08</span><span class="tag warn">Often skipped entirely</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="connector-row">
+    <div class="connector-line"></div>
+    <div class="connector-mid">approved traffic routes to ↓</div>
+    <div class="connector-line"></div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ROW 4: MODEL LAYER + DATA CONNECTORS SIDE BY SIDE -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="row">
+
+    <!-- MODEL LAYER -->
+    <div class="section" style="flex:1">
+      <div class="section-title">
+        <span class="dot" style="background:var(--policy)"></span>
+        <span style="color:var(--policy)">MODEL LAYER</span>
+      </div>
+      <div class="nodes">
+        <div class="node pol">
+          <span class="node-name">Approved Models Only</span>
+          <span class="node-sub">Claude Sonnet/Opus<br>Pinned versions</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">System Prompt Registry</span>
+          <span class="node-sub">Versioned, approved<br>No ad-hoc overrides</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Data Residency</span>
+          <span class="node-sub">EU/US region selection<br>No cross-border leakage</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Fine-tune Governance</span>
+          <span class="node-sub">Training data review<br>Approval before deploy</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATA CONNECTORS -->
+    <div class="section" style="flex:2; border-color:var(--data-dim)">
+      <div class="section-title">
+        <span class="dot" style="background:var(--data)"></span>
+        <span style="color:var(--data)">DATA CONNECTORS — CLASSIFIED BY TIER</span>
+        <span style="color:var(--muted);font-weight:300;letter-spacing:0;font-size:10px;margin-left:8px">AI access must respect data classification. Not all connectors are equal.</span>
+      </div>
+      <div class="nodes">
+        <div class="node dt">
+          <span class="node-name tier-public">● PUBLIC</span>
+          <span class="node-sub">External docs, web<br>Marketing content</span>
+          <div class="tags"><span class="tag biz">Tier 1 — Open</span></div>
+        </div>
+        <div class="node dt">
+          <span class="node-name tier-internal">● INTERNAL</span>
+          <span class="node-sub">SharePoint, Confluence<br>Internal wikis</span>
+          <div class="tags"><span class="tag warn">Tier 2 — AuthN required</span></div>
+        </div>
+        <div class="node dt">
+          <span class="node-name tier-restricted">● RESTRICTED</span>
+          <span class="node-sub">GitHub, ADO repos<br>Data lake / Snowflake</span>
+          <div class="tags"><span class="tag cust">Tier 3 — RBAC + audit</span></div>
+        </div>
+        <div class="node dt">
+          <span class="node-name tier-confidential">● CONFIDENTIAL</span>
+          <span class="node-sub">HR, financials, PII<br>Customer data</span>
+          <div class="tags"><span class="tag red">Tier 4 — Explicit approval</span></div>
+        </div>
+        <div class="node dt">
+          <span class="node-name" style="color:var(--text-dim)">Local Filesystem</span>
+          <span class="node-sub">Scoped paths only<br>No root / home dir</span>
+          <div class="tags"><span class="tag warn">Scope must be declared</span></div>
+        </div>
+        <div class="node dt">
+          <span class="node-name" style="color:var(--text-dim)">MCP Servers</span>
+          <span class="node-sub">Allowlisted only<br>Read-only service accts</span>
+          <div class="tags"><span class="tag red">No wildcard access</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ROW 5: AUDIT, LOGGING, OBSERVABILITY -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="section audit-bar wide">
+    <div class="section-title">
+      <span class="dot" style="background:var(--audit)"></span>
+      <span style="color:var(--audit)">AUDIT, LOGGING &amp; OBSERVABILITY PLANE</span>
+      <span style="color:var(--muted);font-weight:300;letter-spacing:0;font-size:10px;margin-left:8px">— logging is forensics, not prevention. But forensics without logging is just guessing.</span>
+    </div>
+    <div class="nodes">
+      <div class="node au">
+        <span class="node-name">Prompt &amp; Response Logs</span>
+        <span class="node-sub">Full conversation store<br>PII-redacted before write<br>Immutable, tamper-evident</span>
+      </div>
+      <div class="node au">
+        <span class="node-name">Tool Call Logs</span>
+        <span class="node-sub">Every action taken<br>by every agent<br>Input + output recorded</span>
+      </div>
+      <div class="node au">
+        <span class="node-name">Evidence Manifests</span>
+        <span class="node-sub">Agentic pipelines:<br>what sources were used<br>to produce each output</span>
+        <div class="tags"><span class="tag warn">Often absent — critical</span></div>
+      </div>
+      <div class="node au">
+        <span class="node-name">SIEM Integration</span>
+        <span class="node-sub">SumoLogic / Sentinel<br>AI events as first-class<br>security telemetry</span>
+      </div>
+      <div class="node au">
+        <span class="node-name">Anomaly Alerting</span>
+        <span class="node-sub">Unusual data volume<br>Off-hours usage<br>Unexpected tool calls</span>
+      </div>
+      <div class="node au">
+        <span class="node-name">Retention &amp; eDiscovery</span>
+        <span class="node-sub">Legal hold capability<br>Defined retention periods<br>Regulatory alignment</span>
+      </div>
+      <div class="node au">
+        <span class="node-name">Cost &amp; Usage Metrics</span>
+        <span class="node-sub">Per-team attribution<br>Model spend dashboards<br>Anomaly thresholds</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════ -->
+  <!-- ROW 6: GOVERNANCE + TRAINING — BOTTOM BAND -->
+  <!-- ════════════════════════════════════════════ -->
+  <div class="row">
+
+    <div class="section" style="flex:1.4">
+      <div class="section-title">
+        <span class="dot" style="background:var(--policy)"></span>
+        <span style="color:var(--policy)">GOVERNANCE &amp; POLICY</span>
+      </div>
+      <div class="nodes">
+        <div class="node pol">
+          <span class="node-name">AI Acceptable Use Policy</span>
+          <span class="node-sub">Written, signed, enforced<br>Not just a wiki page</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Approved Tool Registry</span>
+          <span class="node-sub">No shadow AI<br>Procurement gating</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Risk Register</span>
+          <span class="node-sub">Per-system risk rating<br>Reviewed quarterly</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Incident Response Plan</span>
+          <span class="node-sub">AI-specific scenarios<br>Who owns the call?</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Vendor Review Process</span>
+          <span class="node-sub">Data processing agreements<br>SOC 2 / ISO 27001 req'd</span>
+        </div>
+        <div class="node pol">
+          <span class="node-name">Change Management</span>
+          <span class="node-sub">Model updates reviewed<br>Prompt changes versioned</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="flex:1">
+      <div class="section-title">
+        <span class="dot" style="background:var(--biz)"></span>
+        <span style="color:var(--biz)">STAFF READINESS</span>
+        <span style="color:var(--muted);font-weight:300;letter-spacing:0;font-size:10px;margin-left:4px">— currently zero at most orgs</span>
+      </div>
+      <div class="nodes">
+        <div class="node biz">
+          <span class="node-name">AI Risk Awareness Training</span>
+          <span class="node-sub">Prompt injection, data overshare<br>What NOT to paste in</span>
+          <div class="tags"><span class="tag red">Gap at most orgs</span></div>
+        </div>
+        <div class="node biz">
+          <span class="node-name">Output Verification Culture</span>
+          <span class="node-sub">AI output ≠ ground truth<br>Hallucination awareness</span>
+        </div>
+        <div class="node biz">
+          <span class="node-name">Role-Specific Guidelines</span>
+          <span class="node-sub">Dev vs analyst vs marketer<br>Different risk profiles</span>
+        </div>
+        <div class="node biz">
+          <span class="node-name">Reporting Pathway</span>
+          <span class="node-sub">How to report unexpected<br>AI behaviour — who do you call?</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="flex:0.8; border-color:var(--red)">
+      <div class="section-title">
+        <span class="dot" style="background:var(--red)"></span>
+        <span style="color:var(--red)">WHAT "INSTALL &amp; GO" GIVES YOU</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:4px">
+        <div class="risk-box">
+          <strong>No layer</strong>
+          AI directly connected to email + data lake with no gateway, no DLP, no content filter, no audit trail, no policy, and no one trained to know what any of that means.
+        </div>
+        <div style="font-size:10px;color:var(--text-dim);line-height:1.7;padding:0 2px">
+          When something goes wrong — and it will — you won't know what happened, when, or who caused it. Logging after the fact is forensics. This architecture is prevention.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /diagram -->
+
+<!-- ── LEGEND ── -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--identity)"></div> Identity &amp; Access Plane</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--dev)"></div> Developer Entry Point</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--biz)"></div> Business Worker Entry Point</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--cust)"></div> Customer-Facing Agent</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--gateway)"></div> AI Gateway / Firewall</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--data)"></div> Data Connectors (classified)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--audit)"></div> Audit &amp; Observability</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--policy)"></div> Governance &amp; Policy</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Active risk / gap</div>
+</div>
+
+<!-- ── FOOTNOTES ── -->
+<div class="footnotes">
+  <div class="footnote warn-note">
+    <strong>On "AI Firewall" Products</strong>
+    Tools like Lakera Guard, Aporia, or Azure APIM with custom policies can handle many gateway functions in one product — prompt injection, content safety, DLP, logging. None of them replace identity, governance, or training. They are the middle layer, not the whole stack.
+  </div>
+  <div class="footnote red-note">
+    <strong>The Agentic Risk That's Usually Missed</strong>
+    When an AI agent generates code or takes actions, it makes hundreds of implicit policy decisions (error handling, auth fallback, retry logic) that no human ever consciously approved. "CLAUDE.md" helps but doesn't solve this. Human review checkpoints are non-optional for any write-capable agent.
+  </div>
+  <div class="footnote ok-note">
+    <strong>Where to Start If You're Behind</strong>
+    1. Audit what's already connected (email, data lake — right now). 2. Block new AI tool procurement without review. 3. Read-only service accounts for all data connectors. 4. Logging pipeline before you expand access further. 5. Then gateway. Everything else follows.
+  </div>
+</div>
+
+</body>
+</html>
